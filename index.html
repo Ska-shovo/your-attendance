@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your attendance</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf for downloading PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        
+        /* Custom scrollbar for table */
+        .table-container::-webkit-scrollbar { width: 6px; }
+        .table-container::-webkit-scrollbar-track { background: #f1f1f1; }
+        .table-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col text-slate-800">
+
+    <!-- Header Section -->
+    <header class="bg-indigo-600 text-white shadow-md p-4 text-center sticky top-0 z-50">
+        <h1 class="text-2xl font-bold tracking-wide"><i class="fas fa-clipboard-user mr-2"></i>Your attendance</h1>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-container" class="flex-grow flex items-center justify-center p-4 w-full max-w-md mx-auto transition-all duration-300">
+        
+        <!-- 1. Setup View -->
+        <div id="setup-view" class="w-full bg-white rounded-2xl shadow-xl p-6 transition-all duration-300">
+            <h2 class="text-xl font-semibold mb-6 text-center text-slate-700 border-b pb-2">Setup Class Info</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Course Name</label>
+                    <input type="text" id="course-name" placeholder="e.g. Android and web Application Development" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Course Code</label>
+                    <input type="text" id="course-code" placeholder="e.g. PROG 211" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Batch Session</label>
+                    <input type="text" id="session" placeholder="e.g. 2022-23" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Date</label>
+                    <input type="date" id="date" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+                </div>
+                
+                <button onclick="startAttendance()" class="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-lg transition duration-200 active:scale-95 flex justify-center items-center gap-2">
+                    Start Attendance <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 2. Regular Attendance View -->
+        <div id="attendance-view" class="w-full hidden flex-col items-center">
+            
+            <div class="w-full flex justify-between items-center mb-6 px-2 text-sm font-medium text-slate-600">
+                <span id="display-course" class="bg-white px-3 py-1 rounded-full shadow-sm"></span>
+                <span id="display-date" class="bg-white px-3 py-1 rounded-full shadow-sm"></span>
+            </div>
+
+            <!-- Card Container for Animation -->
+            <div id="card-container" class="relative w-full h-72 mb-8">
+                <!-- Cards will be injected here via JS -->
+            </div>
+
+            <button onclick="finishAttendance()" class="w-full max-w-xs mx-auto bg-slate-800 hover:bg-slate-900 text-white font-semibold py-4 rounded-xl shadow-lg transition duration-200 active:scale-95">
+                <i class="fas fa-flag-checkered mr-2"></i> Finish Roll Call
+            </button>
+        </div>
+
+        <!-- 3. Course Retake View -->
+        <div id="retake-view" class="w-full hidden flex-col items-center bg-white rounded-2xl shadow-xl p-6 relative">
+            
+            <!-- Cross/Skip Button -->
+            <button onclick="skipRetake()" class="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition duration-200" title="Skip Retake">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+
+            <h2 class="text-xl font-semibold mb-6 text-center text-slate-700 border-b pb-2 w-full">Course Retake</h2>
+            
+            <!-- Step 1: Session Entry -->
+            <div id="retake-step-1" class="w-full space-y-4">
+                <p class="text-sm text-slate-500 text-center mb-4">Jodi kono retake student thake, tahole nicher details din othoba upore Cross (X) e click kore skip korun.</p>
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Retake Session</label>
+                    <input type="text" id="retake-session" placeholder="e.g. 2021-22" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition">
+                </div>
+                <button onclick="goToRetakeStep2()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl shadow-md transition duration-200 active:scale-95">
+                    Next <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+
+            <!-- Step 2: Manual Roll Entry -->
+            <div id="retake-step-2" class="w-full space-y-4 hidden">
+                <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-lg text-center mb-2">
+                    <p class="text-sm text-indigo-800 font-semibold">Retake Session: <span id="display-retake-session"></span></p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-slate-600 mb-1">Student Roll (Short)</label>
+                    <input type="number" id="retake-roll" placeholder="Enter short roll e.g. 31" class="w-full px-4 py-3 border-2 border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold text-center text-lg tracking-widest">
+                </div>
+                
+                <div class="flex gap-3 w-full mt-4">
+                    <button onclick="addRetakeRecord('Present')" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-3 rounded-lg font-bold shadow-sm transition active:scale-95">
+                        <i class="fas fa-check-circle mr-1"></i> Present
+                    </button>
+                    <button onclick="addRetakeRecord('Absent')" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-3 rounded-lg font-bold shadow-sm transition active:scale-95">
+                        <i class="fas fa-times-circle mr-1"></i> Absent
+                    </button>
+                </div>
+
+                <div id="retake-msg" class="text-indigo-600 text-sm text-center font-medium h-5 mt-1 transition-opacity opacity-0"></div>
+
+                <button onclick="skipRetake()" class="w-full mt-6 bg-slate-800 hover:bg-slate-900 text-white font-semibold py-4 rounded-xl shadow-lg transition duration-200 active:scale-95">
+                    <i class="fas fa-file-contract mr-2"></i> Finish Final Report
+                </button>
+            </div>
+        </div>
+
+        <!-- 4. Report/Sheet View -->
+        <div id="report-view" class="w-full hidden flex-col">
+            
+            <!-- Add Missing Student Section -->
+            <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 flex flex-col sm:flex-row items-end gap-3 shadow-sm">
+                <div class="flex-grow w-full">
+                    <label class="block text-xs font-semibold text-indigo-800 mb-1">Add Missing Student ID</label>
+                    <input type="number" id="missing-roll" placeholder="e.g. 2202008" class="w-full px-3 py-2 border border-indigo-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition font-bold text-slate-700">
+                </div>
+                <div class="w-full sm:w-auto">
+                     <label class="block text-xs font-semibold text-indigo-800 mb-1">Status</label>
+                     <select id="missing-status" class="w-full px-3 py-2 border border-indigo-200 rounded-lg outline-none font-semibold text-slate-700 bg-white">
+                         <option value="Present">Present</option>
+                         <option value="Absent">Absent</option>
+                         <option value="Discontinued">Discontinued</option>
+                     </select>
+                </div>
+                <button onclick="addMissingStudent()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold shadow transition active:scale-95 whitespace-nowrap">
+                    <i class="fas fa-plus mr-1"></i> Add
+                </button>
+            </div>
+
+            <!-- This div will be converted to PDF -->
+            <div id="pdf-content" class="bg-white rounded-xl shadow-sm p-6 mb-6">
+                <div class="text-center mb-6 border-b-2 border-slate-200 pb-4">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-1">Attendance Sheet</h2>
+                    <h3 class="text-lg font-semibold text-indigo-700" id="report-course-name"></h3>
+                    <p class="text-slate-600 font-medium">Course Code: <span id="report-course-code"></span></p>
+                    <div class="flex justify-between text-sm mt-4 text-slate-600 font-medium">
+                        <p>Session: <span id="report-session"></span></p>
+                        <p>Date: <span id="report-date"></span></p>
+                    </div>
+                </div>
+
+                <!-- TABLE COMES FIRST NOW -->
+                <div id="table-wrapper" class="table-container rounded-lg border border-slate-200 mb-6">
+                    <table class="w-full text-left text-sm border-collapse">
+                        <thead class="bg-slate-100 text-slate-700">
+                            <tr>
+                                <th class="p-3 border-b border-slate-200">SL</th>
+                                <th class="p-3 border-b border-slate-200">Roll Number</th>
+                                <th class="p-3 border-b border-slate-200 text-right">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-table-body">
+                            <!-- Rows injected here -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- SUMMARY STATS AT THE BOTTOM -->
+                <div class="flex justify-between text-sm font-bold bg-slate-50 border border-slate-200 p-4 rounded-lg shadow-inner">
+                    <span class="text-green-600">Total Present: <span id="total-present" class="text-lg ml-1">0</span></span>
+                    <span class="text-red-500">Total Absent: <span id="total-absent" class="text-lg ml-1">0</span></span>
+                    <span class="text-slate-600">Total Students: <span id="total-students" class="text-lg ml-1">0</span></span>
+                </div>
+            </div>
+
+            <button onclick="downloadPDF()" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 active:scale-95 flex justify-center items-center gap-2 mb-4">
+                <i class="fas fa-download"></i> Click to Download PDF
+            </button>
+            
+            <button onclick="location.reload()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-3 rounded-xl transition duration-200 active:scale-95">
+                Start New Session
+            </button>
+        </div>
+
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-slate-900 text-slate-400 p-4 text-center text-xs mt-auto">
+        <p class="mt-1 font-medium text-slate-300">Developed by Shovo Kumar Acharjo , Session: 2022-23 , EdTE (UFTB)</p>
+    </footer>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Data State
+        let courseName = "";
+        let courseCode = "";
+        let sessionVal = "";
+        let dateVal = "";
+        
+        let currentRollValue = 0;
+        let attendanceRecords = [];
+
+        // Set today's date as default
+        document.getElementById('date').valueAsDate = new Date();
+
+        function startAttendance() {
+            courseName = document.getElementById('course-name').value.trim();
+            courseCode = document.getElementById('course-code').value.trim();
+            sessionVal = document.getElementById('session').value.trim();
+            dateVal = document.getElementById('date').value;
+
+            if(!courseName || !courseCode || !sessionVal || !dateVal) {
+                alert("Doya kore form er sob field thikvabe puron korun.");
+                return;
+            }
+
+            // Logic to generate start roll from session
+            let yearPart = "22"; // default
+            let sessionParts = sessionVal.split('-');
+            if(sessionParts.length > 0) {
+                let firstYear = sessionParts[0].trim(); 
+                yearPart = firstYear.slice(-2); 
+            }
+            if(isNaN(yearPart) || yearPart.length === 0) yearPart = "22"; 
+
+            currentRollValue = parseInt(yearPart + "02001");
+
+            // Update UI headers
+            document.getElementById('display-course').innerText = courseCode;
+            let d = new Date(dateVal);
+            document.getElementById('display-date').innerText = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+
+            // Switch views
+            document.getElementById('setup-view').classList.add('hidden');
+            document.getElementById('attendance-view').classList.remove('hidden');
+            document.getElementById('attendance-view').classList.add('flex');
+
+            showCard(currentRollValue);
+        }
+
+        function showCard(roll, direction = 'next') {
+            const container = document.getElementById('card-container');
+            const card = document.createElement('div');
+            
+            let startClass = direction === 'next' ? 'translate-x-[120%]' : '-translate-x-[120%]';
+            
+            card.className = `absolute inset-0 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-6 flex flex-col items-center justify-center transition-all duration-300 transform ${startClass} opacity-0 border border-slate-100`;
+
+            // Back (Previous) Button Logic
+            let prevBtnHTML = attendanceRecords.length > 0 
+                ? `<button onclick="goPrevious(this)" class="w-12 h-12 flex items-center justify-center text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-full shadow-sm transition active:scale-90" title="Previous Roll"><i class="fas fa-arrow-left text-xl"></i></button>`
+                : `<div class="w-12"></div>`;
+
+            card.innerHTML = `
+                <div class="flex items-center w-full justify-between mb-8 px-2">
+                     ${prevBtnHTML}
+                     <h2 class="text-4xl font-extrabold text-indigo-900 tracking-wider">${roll}</h2>
+                     <button onclick="recordAttendance(${roll}, 'Discontinued', this)" class="w-12 h-12 flex items-center justify-center text-red-500 bg-red-50 hover:bg-red-100 rounded-full shadow-sm transition active:scale-90" title="Red Mark (Missing/Discontinued)">
+                        <i class="fas fa-ban text-xl"></i>
+                     </button>
+                 </div>
+                 
+                 <div class="flex gap-4 w-full">
+                     <button onclick="recordAttendance(${roll}, 'Present', this)" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl text-lg font-bold shadow-md transition active:scale-95 flex flex-col items-center">
+                        <i class="fas fa-check-circle mb-1 text-2xl"></i> Present
+                     </button>
+                     <button onclick="recordAttendance(${roll}, 'Absent', this)" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl text-lg font-bold shadow-md transition active:scale-95 flex flex-col items-center">
+                        <i class="fas fa-times-circle mb-1 text-2xl"></i> Absent
+                     </button>
+                 </div>
+            `;
+            
+            container.appendChild(card);
+
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    card.classList.remove('translate-x-[120%]', '-translate-x-[120%]', 'opacity-0');
+                    card.classList.add('translate-x-0', 'opacity-100');
+                });
+            });
+        }
+
+        function recordAttendance(roll, status, btnElement) {
+            attendanceRecords.push({ roll: roll, status: status, type: 'regular' });
+            const card = btnElement.closest('.absolute');
+            
+            // Slide left for next
+            card.classList.remove('translate-x-0');
+            card.classList.add('-translate-x-[120%]', 'opacity-0');
+
+            setTimeout(() => {
+                card.remove();
+                currentRollValue++;
+                showCard(currentRollValue, 'next');
+            }, 300); 
+        }
+
+        function goPrevious(btnElement) {
+            if (attendanceRecords.length === 0) return;
+            
+            // Remove the last record to allow correcting
+            const lastRecord = attendanceRecords.pop();
+            currentRollValue = lastRecord.roll; 
+
+            const card = btnElement.closest('.absolute');
+            
+            // Slide right for previous
+            card.classList.remove('translate-x-0');
+            card.classList.add('translate-x-[120%]', 'opacity-0');
+
+            setTimeout(() => {
+                card.remove();
+                showCard(currentRollValue, 'prev');
+            }, 300);
+        }
+
+        function finishAttendance() {
+            // Hide Regular Attendance View
+            document.getElementById('attendance-view').classList.add('hidden');
+            document.getElementById('attendance-view').classList.remove('flex');
+            
+            // Show Retake View
+            document.getElementById('retake-view').classList.remove('hidden');
+            document.getElementById('retake-view').classList.add('flex');
+        }
+
+        // ---------- RETAKE LOGIC ---------- //
+        function goToRetakeStep2() {
+            const rSession = document.getElementById('retake-session').value.trim();
+            if(!rSession) {
+                alert("Doya kore retake session likhun (e.g. 2021-22).");
+                return;
+            }
+            document.getElementById('display-retake-session').innerText = rSession;
+            document.getElementById('retake-step-1').classList.add('hidden');
+            document.getElementById('retake-step-2').classList.remove('hidden');
+        }
+
+        function addRetakeRecord(status) {
+            const rollInput = document.getElementById('retake-roll');
+            const shortRoll = rollInput.value.trim();
+            const rSession = document.getElementById('display-retake-session').innerText;
+
+            if(!shortRoll) {
+                alert("Student er short roll entry korun (e.g. 31).");
+                return;
+            }
+
+            // Logic to generate full retake roll based on session
+            let yearPart = "20"; // default fallback
+            let sessionParts = rSession.split('-');
+            if(sessionParts.length > 0) {
+                let firstYear = sessionParts[0].trim(); 
+                if (firstYear.length >= 2) {
+                    yearPart = firstYear.slice(-2); 
+                }
+            }
+
+            // Pad the short roll to 3 digits (e.g., 31 -> 031, 5 -> 005)
+            let paddedRoll = shortRoll.padStart(3, '0');
+            let fullRoll = yearPart + "02" + paddedRoll;
+
+            // Save Retake record
+            attendanceRecords.push({ roll: fullRoll, status: status, type: 'retake', session: rSession });
+
+            // Show Success Message
+            const msgObj = document.getElementById('retake-msg');
+            msgObj.innerText = `ID ${fullRoll} marked as ${status}`;
+            msgObj.classList.remove('opacity-0');
+            msgObj.classList.add('opacity-100');
+            
+            setTimeout(() => {
+                msgObj.classList.remove('opacity-100');
+                msgObj.classList.add('opacity-0');
+            }, 1500);
+
+            // Clear Input for next
+            rollInput.value = '';
+            rollInput.focus();
+        }
+
+        function skipRetake() {
+            // Move to Report View
+            document.getElementById('retake-view').classList.add('hidden');
+            document.getElementById('retake-view').classList.remove('flex');
+            
+            document.getElementById('report-view').classList.remove('hidden');
+            document.getElementById('report-view').classList.add('flex');
+
+            // Expand layout for report rendering correctly in PDF
+            const mainContainer = document.getElementById('main-container');
+            if(mainContainer) {
+                mainContainer.classList.remove('items-center', 'justify-center', 'max-w-md');
+                mainContainer.classList.add('max-w-3xl');
+            }
+
+            generateReport();
+        }
+
+        // ---------- REPORT LOGIC ---------- //
+        function updateRecordStatus(index, newStatus) {
+            attendanceRecords[index].status = newStatus;
+            generateReport(); // Re-render table and stats
+        }
+
+        function addMissingStudent() {
+            const rollInput = document.getElementById('missing-roll');
+            const statusSelect = document.getElementById('missing-status');
+            const roll = rollInput.value.trim();
+            const status = statusSelect.value;
+
+            if(!roll) {
+                alert("Student ID entry korun.");
+                return;
+            }
+
+            const existingIndex = attendanceRecords.findIndex(r => r.roll == roll);
+            if(existingIndex >= 0) {
+                alert("Ei ID already list e ache. Apni nicher list theke tar status srasori change korte paren.");
+                return;
+            }
+
+            // Add new record
+            attendanceRecords.push({ roll: roll, status: status, type: 'added' });
+            
+            // Sort by roll number to place the new ID in the correct serial position
+            attendanceRecords.sort((a, b) => parseInt(a.roll) - parseInt(b.roll));
+
+            generateReport();
+            
+            rollInput.value = ''; // Clear input
+        }
+
+        function generateReport() {
+            document.getElementById('report-course-name').innerText = courseName;
+            document.getElementById('report-course-code').innerText = courseCode;
+            document.getElementById('report-session').innerText = sessionVal;
+            
+            let d = new Date(dateVal);
+            document.getElementById('report-date').innerText = `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+
+            const tbody = document.getElementById('report-table-body');
+            tbody.innerHTML = '';
+
+            let presentCount = 0;
+            let absentCount = 0;
+            let totalStudents = 0;
+
+            attendanceRecords.forEach((record, index) => {
+                // Ignore discontinued ones for total count if needed, but usually they are shown.
+                // Let's count present and absent normally.
+                let selectClass = "";
+                let badgeHTML = "";
+
+                if(record.status === 'Present') {
+                    selectClass = "bg-green-100 text-green-700";
+                    badgeHTML = '<span class="static-badge hidden bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-check mr-1"></i>Present</span>';
+                    presentCount++;
+                    totalStudents++;
+                } else if(record.status === 'Absent') {
+                    selectClass = "bg-red-100 text-red-700";
+                    badgeHTML = '<span class="static-badge hidden bg-red-100 text-red-700 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-times mr-1"></i>Absent</span>';
+                    absentCount++;
+                    totalStudents++;
+                } else {
+                    selectClass = "bg-slate-200 text-slate-600";
+                    badgeHTML = '<span class="static-badge hidden bg-slate-200 text-slate-600 px-2 py-1 rounded-md text-xs font-bold"><i class="fas fa-ban mr-1"></i>Discontinued</span>';
+                }
+
+                // If it's a retake student or added later, show a small badge
+                let rollDisplay = record.roll;
+                if(record.type === 'retake') {
+                    rollDisplay += ` <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1 py-0.5 rounded ml-1 tracking-normal">Retake</span>`;
+                } else if (record.type === 'added') {
+                    rollDisplay += ` <span class="text-[10px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded ml-1 tracking-normal">Added</span>`;
+                }
+
+                let dropdownHTML = `
+                    <select onchange="updateRecordStatus(${index}, this.value)" class="status-dropdown ${selectClass} text-xs font-bold px-2 py-1 rounded-md outline-none cursor-pointer text-center border-none appearance-none">
+                        <option value="Present" ${record.status === 'Present' ? 'selected' : ''}>Present</option>
+                        <option value="Absent" ${record.status === 'Absent' ? 'selected' : ''}>Absent</option>
+                        <option value="Discontinued" ${record.status === 'Discontinued' ? 'selected' : ''}>Discontinued</option>
+                    </select>
+                `;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-3 border-b border-slate-100 font-medium text-slate-500">${index + 1}</td>
+                    <td class="p-3 border-b border-slate-100 font-bold text-indigo-900">${rollDisplay}</td>
+                    <td class="p-3 border-b border-slate-100 text-right">
+                        ${dropdownHTML}
+                        ${badgeHTML}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update stats at the bottom
+            document.getElementById('total-present').innerText = presentCount;
+            document.getElementById('total-absent').innerText = absentCount;
+            document.getElementById('total-students').innerText = totalStudents; // Only counting present+absent
+        }
+
+        function downloadPDF() {
+            const element = document.getElementById('pdf-content');
+            element.classList.add('p-10');
+            
+            // Hide dropdowns, show static badges for clean PDF
+            document.querySelectorAll('.status-dropdown').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.static-badge').forEach(el => el.classList.remove('hidden'));
+
+            // Scroll to top to ensure complete canvas capture
+            window.scrollTo(0, 0);
+            
+            const opt = {
+                margin:       0.5,
+                filename:     `${courseCode}_Attendance_${dateVal}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, scrollY: 0 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+                pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.remove('p-10');
+                
+                // Revert UI to dropdowns after PDF is saved
+                document.querySelectorAll('.status-dropdown').forEach(el => el.classList.remove('hidden'));
+                document.querySelectorAll('.static-badge').forEach(el => el.classList.add('hidden'));
+            });
+        }
+    </script>
+</body>
+</html>
